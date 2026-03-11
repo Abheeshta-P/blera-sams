@@ -2,6 +2,7 @@ import { prisma } from "../../db/prisma.js";
 import { Request, Response } from "express";
 import { hashPassword, verifyPassword } from "../../utils/hash.js";
 import jwt from "jsonwebtoken";
+import { AuthRequest } from "./userAuthMiddleware.js";
 
 const handleCreateUser = async (req: Request, res: Response) => {
     try {
@@ -87,7 +88,27 @@ const handleUserLogin = async (req: Request, res: Response) => {
     }
 }
 
+const handleGetUser = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const userInfo = prisma.user.findUnique({
+            where: {
+                id: req.user.id
+            }
+        });
+
+        res.status(201).json({ message: "Successfully fetched user information.", data: userInfo });
+    } catch (error) {
+        console.error("Error getting user info: ", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export {
     handleCreateUser,
-    handleUserLogin
+    handleUserLogin,
+    handleGetUser
 }
