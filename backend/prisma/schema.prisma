@@ -63,6 +63,8 @@ model Telemetry {
   batteryPowerPlugged  Boolean
   batterySecondsLeft   Int?
   timestamp            DateTime 
+
+  @@index([assetId, timestamp])
 }
 
 model Alert {
