@@ -6,7 +6,7 @@ import type { Asset, Telemetry } from "../generated/prisma/client.js";
 
 export const setUpTelemetrySocket = (io: Server) => {
   io.on("connection", (socket: Socket) => {
-    console.log(`New connection established: ${socket.id}`);
+    console.log(`Telemetry connection established: ${socket.id}`);
 
     // handle dashboard user joining the room
     const userId = socket.handshake.auth.userId;
