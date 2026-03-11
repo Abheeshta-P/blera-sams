@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { User, Bell, Search, LogOut, Cpu, X, Plus, Trash2, AlertCircle, PlusCircle } from 'lucide-react';
+import { User, Bell, Search, LogOut, Cpu, X, Plus, Trash2, AlertCircle, PlusCircle, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDashboardStore } from '../../store/useDashBoardStore';
+import { useAddMacsMutation } from '../../hooks/queries/useAddMacs';
 
 export default function Header() {
   const { pathname } = useLocation();
@@ -175,6 +176,8 @@ function MacWhitelistModal({ onClose }: { onClose: () => void }) {
       .filter(idx => idx !== -1);
   };
 
+  const { mutate: addMacs, isPending, isError } = useAddMacsMutation();
+
   const validateAndSave = () => {
     const newErrors = getInvalidMacIndices();
     if (newErrors.length > 0) {
@@ -182,11 +185,13 @@ function MacWhitelistModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    // TODO: Call to backend with list of mac address
-
-    localStorage.removeItem('blera_mac_draft');
-    console.log("Saving valid MACs to API:", macs);
-    onClose();
+    // Call backend
+    addMacs(macs, {
+      onSuccess: () => {
+        localStorage.removeItem("blera_mac_draft");
+        onClose();
+      },
+    });
   };
 
   const addAnotherDevice = () => {
@@ -259,8 +264,11 @@ function MacWhitelistModal({ onClose }: { onClose: () => void }) {
 
           <button
             onClick={validateAndSave}
-            className="mt-6 w-full py-2.5 bg-linear-to-r from-(--color-primary) to-(--color-sec) text-white rounded-xl font-bold text-sm shadow-lg hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+            disabled={isPending || isError}
+            className={`mt-6 w-full py-2.5 bg-linear-to-r from-(--color-primary) to-(--color-sec) text-white rounded-xl font-bold text-sm shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${isPending || isError ? "opacity-50 cursor-not-allowed" : ""
+              }`}
           >
+            {isPending && <Loader2 className="animate-spin h-4 w-4" />}
             Register Device
           </button>
         </div>
