@@ -2,14 +2,14 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { SERVER_URL } from "../../config/config";
 import { useAuthStore } from "../../store/useAuthStore";
 
-export const useAlerts = (page: number, viewMode: 'ACTIVE' | 'RESOLVED', limit: number = 10) => {
+export const useAlerts = (page: number, viewMode: 'ACTIVE' | 'RESOLVED',search: string, severity: string, timeFrame: string, limit: number = 10) => {
   const token = useAuthStore((state) => state.token);
 
   return useQuery({
-    queryKey: ["alerts", viewMode, page, limit],
+    queryKey: ["alerts", viewMode, page, search, severity, timeFrame, limit],
     enabled: !!token,
     queryFn: async () => {
-      const response = await fetch(`${SERVER_URL}/api/alert?page=${page}&limit=${limit}&status=${viewMode}`, {
+      const response = await fetch(`${SERVER_URL}/api/alert?page=${page}&limit=${limit}&status=${viewMode}&search=${encodeURIComponent(search)}&severity=${severity}&timeFrame=${timeFrame}`, {
         headers: {
           authorization: `Bearer ${token}`,
         },

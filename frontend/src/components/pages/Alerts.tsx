@@ -1,25 +1,23 @@
-import React, { useState } from "react";
-import { CheckCircle, Clock } from "lucide-react";
-import { useAlertFilters } from "../../hooks/useAlertFilters";
+import React, { useEffect, useState } from "react";
+import { CheckCircle, Clock, Search } from "lucide-react"; 
 import { useAlerts } from "../../hooks/queries/useAlert"; 
 import { getAlertTheme, getAlertIcon, formatAlertLabel } from "../../utils/AlertHelpers"; 
 
 export default function Alerts() {
   const [viewMode, setViewMode] = useState<'ACTIVE' | 'RESOLVED'>('ACTIVE');
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [severityFilter, setSeverityFilter] = useState("ALL");
+  const [timeFilter, setTimeFilter] = useState("ALL_TIME");
   
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError } = useAlerts(page, viewMode);
+  const { data, isLoading, isError } = useAlerts(page, viewMode, debouncedSearch, severityFilter, timeFilter, 9);
 
-  const alerts = data?.alerts || [];
+  // The backend already filtered everything, so we just pass this array straight to the UI
+  const displayedAlerts = data?.alerts || [];
   const totalPages = data?.totalPages || 1;
   const counts = data?.counts || { active: 0, resolved: 0 };
-
-  const { activeAlerts, resolvedAlerts, sortBySeverity } = useAlertFilters(alerts);
-
-  const displayedAlerts = viewMode === 'ACTIVE'
-    ? sortBySeverity(activeAlerts)
-    : resolvedAlerts;
 
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
@@ -27,6 +25,14 @@ export default function Alerts() {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   return (
     <div className="w-full bg-(--color-card) border border-(--color-card-border) rounded-2xl shadow-xl overflow-hidden font-sans flex flex-col h-full">
@@ -60,6 +66,54 @@ export default function Alerts() {
         </div>
       </div>
 
+      {/* Filter and Search Bar Section */}
+      <div className="px-6 py-4 flex gap-4 items-center border-b border-(--color-card-border) bg-(--color-panel)/20">
+        
+        {/* Search Input */}
+        <div className="relative flex-grow max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={16} className="text-gray-500" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by Asset ID or Message..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-(--color-panel) border border-(--color-card-border) rounded-lg text-sm text-gray-200 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder-gray-500"
+          />
+        </div>
+
+        {/* Severity Dropdown */}
+        <select
+          value={severityFilter}
+          onChange={(e) => {
+            setSeverityFilter(e.target.value);
+            setPage(1);
+          }}
+          className="py-2 px-4 bg-(--color-panel) border border-(--color-card-border) rounded-lg text-sm text-gray-300 focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+        >
+          <option value="ALL">All Severities</option>
+          <option value="CRITICAL">Critical Only</option>
+          <option value="WARNING">Warning Only</option>
+        </select>
+
+        {/* Time Frame Dropdown */}
+        <select
+          value={timeFilter}
+          onChange={(e) => {
+            setTimeFilter(e.target.value);
+            setPage(1); 
+          }}
+          className="py-2 px-4 bg-(--color-panel) border border-(--color-card-border) rounded-lg text-sm text-gray-300 focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+        >
+          <option value="ALL_TIME">All Time</option>
+          <option value="24H">Last 24 Hours</option>
+          <option value="7D">Last 7 Days</option>
+          <option value="30D">Last 30 Days</option>
+        </select>
+        
+      </div>
+
       {/* Table Content - Headers Removed */}
       <div className="overflow-x-auto flex-grow">
         <table className="w-full text-left border-collapse">
@@ -83,7 +137,7 @@ export default function Alerts() {
                 </td>
               </tr>
             ) : (
-              displayedAlerts.map((alert) => {
+              displayedAlerts.map((alert: any) => {
                 const CategoryIcon = getAlertIcon(alert.category);
 
                 return (
