@@ -1,38 +1,39 @@
 import { prisma } from "../../lib/prisma.js";
 import { AuthRequest } from "../../users/controller/userAuthMiddleware.js";
 import { Response } from "express";
+import { Status } from "../../generated/prisma/enums.js";
 
 const addAsset = async (req: AuthRequest, res: Response) => {
   try {
     const { macAddress } = req.body;
 
-    if (!macAddress) {
-      res.status(400).json({ message: "MAC address is required to register" });
+    if (!macAddress || !Array.isArray(macAddress) || macAddress.length === 0) {
+      return res.status(400).json({ message: "macAddresses array is required" });
     }
 
-    if (!req.user || !req.user.id) {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const asset = await prisma.asset.create({
-      data: {
-        macAddr: macAddress,
-        status: "OFFLINE",
-        ownerId: req.user.id,
-      },
+    const userId = req.user.id;
+
+    const assetsData = macAddress.map((mac: string) => ({
+      macAddr: mac,
+      status: Status.OFFLINE,
+      ownerId: userId,
+    }));
+
+    const assets = await prisma.asset.createMany({
+      data: assetsData,
+      skipDuplicates: true,
     });
 
     res.status(201).json({
-      message: "Asset successfully registered and assigned",
-      data: asset,
+      message: "Assets successfully registered and assigned",
+      createdCount: assets.count,
     });
-  } catch (error: any) {
-    if (error.code === "P2002") {
-      return res.status(409).json({ message: "Device with this Mac address already exists." });
-    }
-
-    console.error("Error registering asset:", error);
+  } catch (error) {
+    console.error("Error registering assets:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
